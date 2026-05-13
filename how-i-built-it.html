@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>How I Built a Program and Hosted It on the Internet — With No Technical Experience</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;0,9..144,700;1,9..144,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #1B2A4A;
+    --navy-mid: #243555;
+    --navy-light: #2e4268;
+    --green: #00DC82;
+    --green-dim: rgba(0,220,130,0.15);
+    --green-border: rgba(0,220,130,0.3);
+    --white: #ffffff;
+    --off-white: #F4F5F7;
+    --text-body: #c8d4e8;
+    --text-muted: #7a93b8;
+    --text-faint: #4a6490;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--navy);
+    color: var(--text-body);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 17px;
+    line-height: 1.75;
+    overflow-x: hidden;
+  }
+
+  /* ── NOISE TEXTURE ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.4;
+  }
+
+  /* ── PROGRESS BAR ── */
+  #progress {
+    position: fixed;
+    top: 0; left: 0;
+    height: 3px;
+    background: var(--green);
+    width: 0%;
+    z-index: 1000;
+    transition: width 0.1s linear;
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    padding: 18px 48px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(27,42,74,0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .nav-brand {
+    font-family: 'Fraunces', serif;
+    font-size: 15px;
+    color: var(--green);
+    letter-spacing: 0.02em;
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 32px;
+    list-style: none;
+  }
+
+  .nav-links a {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    transition: color 0.2s;
+  }
+
+  .nav-links a:hover { color: var(--white); }
+
+  /* ── HERO ── */
+  .hero {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    padding: 120px 48px 80px;
+    overflow: hidden;
+  }
+
+  .hero-bg-circle {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    pointer-events: none;
+  }
+
+  .hero-bg-circle.c1 {
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(0,220,130,0.08) 0%, transparent 70%);
+    top: -100px; right: -100px;
+    animation: drift 12s ease-in-out infinite alternate;
+  }
+
+  .hero-bg-circle.c2 {
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(59,130,246,0.06) 0%, transparent 70%);
+    bottom: 0; left: 10%;
+    animation: drift 16s ease-in-out infinite alternate-reverse;
+  }
+
+  @keyframes drift {
+    from { transform: translate(0, 0); }
+    to { transform: translate(30px, 20px); }
+  }
+
+  .hero-content {
+    position: relative;
+    max-width: 780px;
+  }
+
+  .hero-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--green-dim);
+    border: 1px solid var(--green-border);
+    border-radius: 20px;
+    padding: 6px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--green);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 32px;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.2s forwards;
+  }
+
+  .hero-tag .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .hero h1 {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(36px, 5vw, 64px);
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--white);
+    letter-spacing: -0.02em;
+    margin-bottom: 24px;
+    opacity: 0;
+    animation: fadeUp 0.7s 0.3s forwards;
+  }
+
+  .hero h1 em {
+    font-style: italic;
+    color: var(--green);
+  }
+
+  .hero-sub {
+    font-size: 18px;
+    color: var(--text-muted);
+    max-width: 560px;
+    line-height: 1.7;
+    margin-bottom: 48px;
+    opacity: 0;
+    animation: fadeUp 0.7s 0.5s forwards;
+  }
+
+  .hero-meta {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    opacity: 0;
+    animation: fadeUp 0.7s 0.7s forwards;
+  }
+
+  .hero-avatar {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--green), #0099cc);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Fraunces', serif;
+    font-size: 18px;
+    color: var(--navy);
+    font-weight: 700;
+  }
+
+  .hero-byline {
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+
+  .hero-byline strong {
+    display: block;
+    color: var(--white);
+    font-weight: 600;
+    font-size: 15px;
+  }
+
+  /* Scroll hint */
+  .scroll-hint {
+    position: absolute;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-faint);
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    opacity: 0;
+    animation: fadeUp 0.7s 1.2s forwards;
+  }
+
+  .scroll-arrow {
+    width: 20px; height: 20px;
+    border-right: 2px solid var(--text-faint);
+    border-bottom: 2px solid var(--text-faint);
+    transform: rotate(45deg);
+    animation: bounce 1.5s infinite;
+  }
+
+  @keyframes bounce {
+    0%, 100% { transform: rotate(45deg) translateY(0); }
+    50% { transform: rotate(45deg) translateY(4px); }
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── SECTION NAV DOTS ── */
+  .section-dots {
+    position: fixed;
+    right: 28px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    z-index: 50;
+  }
+
+  .section-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--navy-light);
+    border: 1px solid var(--text-faint);
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+
+  .section-dot.active {
+    background: var(--green);
+    border-color: var(--green);
+    transform: scale(1.3);
+  }
+
+  /* ── MAIN CONTENT ── */
+  main {
+    position: relative;
+    z-index: 1;
+  }
+
+  .section {
+    padding: 100px 48px;
+    max-width: 860px;
+    margin: 0 auto;
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.7s, transform 0.7s;
+  }
+
+  .section.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Section number + label */
+  .section-label {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  .section-num {
+    font-family: 'Fraunces', serif;
+    font-size: 13px;
+    color: var(--green);
+    font-weight: 600;
+    letter-spacing: 0.1em;
+  }
+
+  .section-rule {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, var(--green-border), transparent);
+  }
+
+  .section h2 {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(28px, 3.5vw, 44px);
+    font-weight: 700;
+    color: var(--white);
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    margin-bottom: 28px;
+  }
+
+  .section h2 em {
+    font-style: italic;
+    color: var(--green);
+  }
+
+  .section p {
+    color: var(--text-body);
+    margin-bottom: 20px;
+    font-size: 17px;
+  }
+
+  /* ── CALLOUT BOXES ── */
+  .callout {
+    border-left: 3px solid var(--green);
+    background: var(--green-dim);
+    border-radius: 0 10px 10px 0;
+    padding: 20px 24px;
+    margin: 32px 0;
+    font-size: 16px;
+    color: var(--text-body);
+  }
+
+  .callout strong {
+    color: var(--green);
+  }
+
+  /* ── STEP CARDS ── */
+  .steps {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin: 36px 0;
+  }
+
+  .step-card {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    background: var(--navy-mid);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 14px;
+    padding: 24px;
+    cursor: pointer;
+    transition: border-color 0.2s, transform 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .step-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(0,220,130,0.04), transparent);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .step-card:hover {
+    border-color: var(--green-border);
+    transform: translateX(4px);
+  }
+
+  .step-card:hover::before { opacity: 1; }
+
+  .step-num {
+    flex-shrink: 0;
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: var(--green-dim);
+    border: 1px solid var(--green-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Fraunces', serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--green);
+  }
+
+  .step-content h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--white);
+    margin-bottom: 6px;
+  }
+
+  .step-content p {
+    font-size: 15px;
+    color: var(--text-muted);
+    margin: 0;
+  }
+
+  /* ── PROMPT DEMO ── */
+  .prompt-demo {
+    background: #0d1929;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    overflow: hidden;
+    margin: 32px 0;
+  }
+
+  .prompt-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    background: rgba(255,255,255,0.04);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .prompt-dots {
+    display: flex;
+    gap: 6px;
+  }
+
+  .prompt-dots span {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+  }
+
+  .prompt-dots span:nth-child(1) { background: #ff5f57; }
+  .prompt-dots span:nth-child(2) { background: #febc2e; }
+  .prompt-dots span:nth-child(3) { background: #28c840; }
+
+  .prompt-label {
+    font-size: 12px;
+    color: var(--text-faint);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .prompt-copy {
+    background: none;
+    border: 1px solid var(--text-faint);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 11px;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .prompt-copy:hover {
+    border-color: var(--green);
+    color: var(--green);
+  }
+
+  .prompt-copy.copied {
+    border-color: var(--green);
+    color: var(--green);
+  }
+
+  .prompt-body {
+    padding: 24px;
+    font-family: 'DM Mono', 'Fira Code', monospace;
+    font-size: 14px;
+    line-height: 1.8;
+    color: #a8c4e8;
+    white-space: pre-wrap;
+  }
+
+  .prompt-body .highlight {
+    color: var(--green);
+    font-weight: 600;
+  }
+
+  /* ── TOOL BADGES ── */
+  .tool-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 24px 0;
+  }
+
+  .badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    border: 1px solid;
+  }
+
+  .badge.green {
+    background: var(--green-dim);
+    border-color: var(--green-border);
+    color: var(--green);
+  }
+
+  .badge.blue {
+    background: rgba(59,130,246,0.1);
+    border-color: rgba(59,130,246,0.3);
+    color: #60a5fa;
+  }
+
+  .badge.purple {
+    background: rgba(168,85,247,0.1);
+    border-color: rgba(168,85,247,0.3);
+    color: #c084fc;
+  }
+
+  .badge.orange {
+    background: rgba(251,146,60,0.1);
+    border-color: rgba(251,146,60,0.3);
+    color: #fb923c;
+  }
+
+  /* ── DIVIDER ── */
+  .section-divider {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 0 48px;
+    border: none;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.07), transparent);
+  }
+
+  /* ── HIGHLIGHT STAT ── */
+  .stat-row {
+    display: flex;
+    gap: 20px;
+    margin: 32px 0;
+  }
+
+  .stat-card {
+    flex: 1;
+    background: var(--navy-mid);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 14px;
+    padding: 24px;
+    text-align: center;
+  }
+
+  .stat-card .stat-num {
+    font-family: 'Fraunces', serif;
+    font-size: 36px;
+    font-weight: 700;
+    color: var(--green);
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+
+  .stat-card .stat-label {
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  /* ── GITHUB STEPS ── */
+  .code-inline {
+    background: rgba(0,220,130,0.1);
+    border: 1px solid var(--green-border);
+    border-radius: 5px;
+    padding: 2px 8px;
+    font-family: 'DM Mono', 'Fira Code', monospace;
+    font-size: 14px;
+    color: var(--green);
+  }
+
+  /* ── HONEST TAKE ── */
+  .honest-box {
+    background: var(--navy-mid);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    padding: 32px;
+    margin: 32px 0;
+    position: relative;
+  }
+
+  .honest-box::before {
+    content: '"';
+    font-family: 'Fraunces', serif;
+    font-size: 80px;
+    color: var(--green);
+    opacity: 0.2;
+    position: absolute;
+    top: 10px;
+    left: 20px;
+    line-height: 1;
+  }
+
+  .honest-box p {
+    padding-left: 20px;
+    font-size: 18px;
+    font-style: italic;
+    color: var(--white);
+    line-height: 1.7;
+    margin: 0;
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    padding: 60px 48px;
+    border-top: 1px solid rgba(255,255,255,0.07);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 860px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+  }
+
+  .footer-brand {
+    font-family: 'Fraunces', serif;
+    font-size: 14px;
+    color: var(--text-faint);
+  }
+
+  .footer-brand strong {
+    color: var(--green);
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 700px) {
+    nav { padding: 16px 20px; }
+    .nav-links { display: none; }
+    .hero, .section { padding: 80px 24px; }
+    .hero { padding-top: 100px; }
+    .stat-row { flex-direction: column; }
+    footer { flex-direction: column; gap: 16px; padding: 40px 24px; }
+    .section-dots { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div id="progress"></div>
+
+<nav>
+  <div class="nav-brand">Thomas Rose · NearForm</div>
+  <ul class="nav-links">
+    <li><a href="#why">Why</a></li>
+    <li><a href="#claude">Claude</a></li>
+    <li><a href="#github">GitHub</a></li>
+    <li><a href="#vercel">Vercel</a></li>
+  </ul>
+</nav>
+
+<div class="section-dots" id="dots">
+  <div class="section-dot active" data-section="hero" onclick="scrollToSection('hero')"></div>
+  <div class="section-dot" data-section="why" onclick="scrollToSection('why')"></div>
+  <div class="section-dot" data-section="claude" onclick="scrollToSection('claude')"></div>
+  <div class="section-dot" data-section="github" onclick="scrollToSection('github')"></div>
+  <div class="section-dot" data-section="vercel" onclick="scrollToSection('vercel')"></div>
+</div>
+
+<!-- ── HERO ── -->
+<section class="hero" id="hero">
+  <div class="hero-bg-circle c1"></div>
+  <div class="hero-bg-circle c2"></div>
+  <div class="hero-content">
+    <div class="hero-tag">
+      <span class="dot"></span>
+      A Show &amp; Tell for HR Professionals
+    </div>
+    <h1>How I Built a Program and Hosted It on the Internet — <em>With No Technical Experience</em></h1>
+    <p class="hero-sub">Six months ago I couldn't have told you the difference between a repository and a folder. This is the honest story of how I built an interactive HR Analytics Dashboard and put it live on the web — using Claude as my co-builder.</p>
+    <div class="hero-meta">
+      <div class="hero-avatar">T</div>
+      <div class="hero-byline">
+        <strong>Thomas Rose</strong>
+        Head of People &amp; Transformation · NearForm
+      </div>
+    </div>
+  </div>
+  <div class="scroll-hint">
+    <span>Scroll</span>
+    <div class="scroll-arrow"></div>
+  </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- ── SECTION 1: WHY ── -->
+<section class="section" id="why">
+  <div class="section-label">
+    <span class="section-num">01 · Why</span>
+    <div class="section-rule"></div>
+  </div>
+  <h2>Why I wanted to <em>learn this</em></h2>
+
+  <p>I'm an HR professional. My job is people strategy, transformation, and building programmes that actually move the needle for an organisation. I'm not a developer. I never intended to become one.</p>
+
+  <p>But something shifted when AI tools started getting genuinely useful. I noticed the people getting the most from them weren't just using AI to write emails faster — they were building things. Dashboards. Tools. Automations. Things that actually changed how work got done.</p>
+
+  <div class="honest-box">
+    <p>I didn't want to just talk about AI in HR. I wanted to show what it could do. And the only way to do that credibly was to build something myself.</p>
+  </div>
+
+  <p>The specific trigger was a conversation about people analytics. We had all the data — headcount, attrition, salary, engagement scores — sitting in spreadsheets. No one was looking at it in a meaningful way because no one had made it easy to look at.</p>
+
+  <p>I wanted to build an HR Analytics Dashboard. Something interactive. Something you could filter by location, drill into attrition, see a gender pay gap breakdown in real time. The kind of thing that usually requires a data team and a six-month project.</p>
+
+  <div class="tool-badges">
+    <div class="badge green">📊 HR Analytics Dashboard</div>
+    <div class="badge blue">🔍 No data team required</div>
+    <div class="badge purple">⚡ Built in hours, not months</div>
+  </div>
+
+  <p>I had two things going for me: I understood what good output looked like (that's the HR professional part), and I was willing to try things without fully understanding them first (that's the part I had to learn).</p>
+
+  <div class="callout">
+    <strong>The honest starting point:</strong> I understood technology concepts but had never actually built anything. I knew what a dashboard should do — I just had no idea how to make one exist.
+  </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- ── SECTION 2: CLAUDE ── -->
+<section class="section" id="claude">
+  <div class="section-label">
+    <span class="section-num">02 · Building</span>
+    <div class="section-rule"></div>
+  </div>
+  <h2>How I used Claude to <em>build the thing</em></h2>
+
+  <p>The first thing I had to unlearn was the idea that I needed to understand the code before I could use it. I don't understand how my car engine works — that doesn't stop me from driving.</p>
+
+  <p>Claude is my co-builder. I tell it what I want in plain English. It writes the code. I review the output, tell it what to change, and we iterate until it looks and works exactly how I imagined.</p>
+
+  <p>Here's roughly how the dashboard conversation went:</p>
+
+  <div class="prompt-demo">
+    <div class="prompt-header">
+      <div class="prompt-dots">
+        <span></span><span></span><span></span>
+      </div>
+      <span class="prompt-label">My prompt to Claude</span>
+      <button class="prompt-copy" id="copyBtn1" onclick="copyPrompt('promptText1', 'copyBtn1')">Copy</button>
+    </div>
+    <div class="prompt-body" id="promptText1"><span class="highlight">Build me an interactive HR Analytics Dashboard in React.</span>
+
+It should have tabs for:
+— Headcount overview (total employees, by location, by department)  
+— Attrition analysis (leavers over time, reasons, voluntary vs involuntary)  
+— Gender pay gap breakdown  
+— Salary distribution  
+
+Use NearForm brand colours: navy #1B2A4A and green #00DC82.  
+The data should come from CSV files with these fields: [EmployeeInfo, EmployeePosition, SalaryInfo]  
+Include a location filter that updates all charts.  
+Make it look professional — not like a template.</div>
+  </div>
+
+  <p>That's it. No code. No technical jargon. Just a clear description of what I wanted, what data I had, and what it should look like.</p>
+
+  <div class="steps">
+    <div class="step-card">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <h3>Describe the output you want</h3>
+        <p>Be specific about what the thing should do, what it should look like, and what data it needs. The more detail you give, the better the first draft.</p>
+      </div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <h3>Review and react, not inspect and fix</h3>
+        <p>You don't need to read the code. Open the output, look at it, and tell Claude what's wrong in plain English. "The chart labels are too small." "The filter doesn't seem to be working." That's enough.</p>
+      </div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <h3>Ask Claude to explain anything confusing</h3>
+        <p>When it produced a React component I didn't recognise, I just asked: "What is this and why did you use it?" It explained in plain English. No jargon unless I asked for it.</p>
+      </div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">4</div>
+      <div class="step-content">
+        <h3>Keep iterating until it's right</h3>
+        <p>My dashboard went through about twelve rounds of feedback before it was where I wanted it. Each round got faster because I got better at describing what I needed.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="stat-row">
+    <div class="stat-card">
+      <div class="stat-num">~12</div>
+      <div class="stat-label">rounds of iteration</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">0</div>
+      <div class="stat-label">lines of code written by hand</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">1</div>
+      <div class="stat-label">day from idea to working dashboard</div>
+    </div>
+  </div>
+
+  <p>The final output was a single HTML file containing all the code. Claude does the work. You download the file. That's the thing you're going to put on the internet in the next two steps.</p>
+
+  <div class="callout">
+    <strong>The key mindset shift:</strong> You're the product manager. Claude is the developer. Your job is to know what good looks like and communicate clearly — both of which you already know how to do.
+  </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- ── SECTION 3: GITHUB ── -->
+<section class="section" id="github">
+  <div class="section-label">
+    <span class="section-num">03 · GitHub</span>
+    <div class="section-rule"></div>
+  </div>
+  <h2>How I added it to <em>GitHub</em></h2>
+
+  <p>GitHub is where developers store and share code. Think of it as Google Drive for programs — except it also tracks every change you've ever made, and it connects to tools that can automatically put your code live on the internet.</p>
+
+  <p>You don't need to understand how GitHub works deeply. You need to know four things:</p>
+
+  <div class="steps">
+    <div class="step-card">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <h3>Create a free account at github.com</h3>
+        <p>Standard sign-up. No payment required for what we're doing.</p>
+      </div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <h3>Create a new repository</h3>
+        <p>A repository (or "repo") is just a folder for your project. Click <span class="code-inline">New</span> → give it a name (e.g. <span class="code-inline">hr-analytics-dashboard</span>) → set it to Public → click <span class="code-inline">Create repository</span>.</p>
+      </div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <h3>Upload your file</h3>
+        <p>In your new repository, click <span class="code-inline">Add file</span> → <span class="code-inline">Upload files</span> → drag your HTML file in → scroll down and click <span class="code-inline">Commit changes</span>. That's it. Your file is now on GitHub.</p>
+      </div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">4</div>
+      <div class="step-content">
+        <h3>Your file is now in the cloud</h3>
+        <p>Anyone with the link can see the raw file. But it's not a website yet — that's the next step.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout">
+    <strong>Confused by GitHub?</strong> Just ask Claude: "I'm a complete beginner. Walk me through creating a GitHub repository and uploading a single HTML file, step by step, with screenshots." It'll guide you through the exact interface you're looking at.
+  </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- ── SECTION 4: VERCEL ── -->
+<section class="section" id="vercel">
+  <div class="section-label">
+    <span class="section-num">04 · Vercel</span>
+    <div class="section-rule"></div>
+  </div>
+  <h2>How I hosted it on <em>Vercel</em></h2>
+
+  <p>Vercel is a free hosting platform. You connect it to your GitHub repository, and it turns your code into a live website with a real URL you can share with anyone.</p>
+
+  <p>This part genuinely surprised me with how simple it is:</p>
+
+  <div class="steps">
+    <div class="step-card">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <h3>Sign up at vercel.com</h3>
+        <p>Use your GitHub account to sign in — this is the easiest option because it automatically connects the two platforms.</p>
+      </div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <h3>Import your GitHub repository</h3>
+        <p>Click <span class="code-inline">New Project</span> → select your repository from the list → click <span class="code-inline">Deploy</span>. Vercel figures out the rest automatically.</p>
+      </div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <h3>Wait about 60 seconds</h3>
+        <p>Vercel builds and deploys your project. When it's done, it gives you a live URL — something like <span class="code-inline">your-project.vercel.app</span>. That's your website, live on the internet.</p>
+      </div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">4</div>
+      <div class="step-content">
+        <h3>Share the link</h3>
+        <p>Anyone with the URL can access your dashboard. And every time you update the file on GitHub, Vercel automatically re-deploys. You never have to touch Vercel again.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="stat-row">
+    <div class="stat-card">
+      <div class="stat-num">£0</div>
+      <div class="stat-label">total cost to host</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">~60s</div>
+      <div class="stat-label">deployment time</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">∞</div>
+      <div class="stat-label">times you can share the link</div>
+    </div>
+  </div>
+
+  <div class="honest-box">
+    <p>The bit that genuinely made me stop and think: I had just put something on the internet. Not a LinkedIn post. Not a shared Google Doc. An actual piece of software, with its own URL, accessible by anyone in the world. And I did it in an afternoon.</p>
+  </div>
+
+  <p>I'm not a developer now. I still don't fully understand what's happening under the hood. But I don't need to — just like I don't need to understand how a spreadsheet calculates a formula to use one.</p>
+
+  <p>What I do understand is that the barrier between "I have an idea" and "I have a thing that exists on the internet" is much lower than it used to be. For HR professionals curious about tech, this is the moment to start experimenting.</p>
+
+  <div class="callout">
+    <strong>The only thing stopping most people is starting.</strong> Pick something small — a tool, a dashboard, a calculator — describe it clearly to Claude, and see what comes back. The worst that happens is you learn something.
+  </div>
+</section>
+
+<footer>
+  <div class="footer-brand">
+    <strong>Thomas Rose</strong> · Head of People &amp; Transformation · NearForm
+  </div>
+  <div style="font-size: 13px; color: var(--text-faint);">Built with Claude · Hosted on Vercel</div>
+</footer>
+
+<script>
+  // ── PROGRESS BAR ──
+  window.addEventListener('scroll', () => {
+    const scrolled = (window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100;
+    document.getElementById('progress').style.width = scrolled + '%';
+  });
+
+  // ── INTERSECTION OBSERVER (scroll reveal + dots) ──
+  const sections = document.querySelectorAll('.section');
+  const dots = document.querySelectorAll('.section-dot');
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        const id = entry.target.id;
+        dots.forEach(d => d.classList.remove('active'));
+        const active = document.querySelector(`.section-dot[data-section="${id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { threshold: 0.2 });
+
+  sections.forEach(s => observer.observe(s));
+
+  // Hero dot active on load
+  const heroObserver = new IntersectionObserver((entries) => {
+    if (entries[0].isIntersecting) {
+      dots.forEach(d => d.classList.remove('active'));
+      document.querySelector('.section-dot[data-section="hero"]').classList.add('active');
+    }
+  }, { threshold: 0.5 });
+  heroObserver.observe(document.querySelector('.hero'));
+
+  // ── SCROLL TO SECTION ──
+  function scrollToSection(id) {
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  // ── COPY PROMPT ──
+  function copyPrompt(textId, btnId) {
+    const text = document.getElementById(textId).innerText;
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = document.getElementById(btnId);
+      btn.textContent = 'Copied ✓';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.textContent = 'Copy';
+        btn.classList.remove('copied');
+      }, 2000);
+    });
+  }
+</script>
+</body>
+</html>
